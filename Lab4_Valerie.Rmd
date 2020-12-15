@@ -1,0 +1,355 @@
+---
+title: "Lab4"
+author: "Valerie Kamgue"
+date: "10/9/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(spatstat)
+library(splancs)
+```
+
+```{r}
+uganda.ppp=dget("C:/Users/valer/Desktop/SIE512/Labs/Lab4/UgandaFile/ugandappp.txt")
+```
+
+```{r}
+plot(uganda.ppp, pch=16)
+```
+
+
+```{r}
+plot(gordon, pch=16)
+```
+
+```{r}
+attributes (uganda.ppp) 
+```
+
+```{r}
+attributes (gordon)
+```
+
+```{r}
+np <- uganda.ppp$n
+```
+
+```{r}
+np= gordon$n
+```
+
+
+```{r}
+summary(uganda.ppp)
+```
+
+```{r}
+summary(gordon)
+```
+
+```{r}
+#lambda.uganda = summary(uganda.ppp)$intensity
+#lambda.uganda
+```
+
+```{r}
+#lambda.gordon = summary(gordon)$intensity
+#lambda.gordon
+```
+
+
+```{r}
+#nndist(uganda.ppp) 
+```
+
+
+```{r}
+#nndist(gordon) 
+```
+
+
+###Function to compute the observed mean nearest neighbor distance
+
+```{r}
+mean.obsnnd <-function(onnd){
+  #mean.value<- mean(onnd)
+  value <- mean(onnd)
+ # cat("The observed mean is",mean.value)
+  return (value)
+  }
+```
+
+
+
+```{r}
+##mean.obsnnd(c(nndist(uganda.ppp)))
+```
+
+```{r}
+###mean.obsnnd(c(nndist(gordon)))
+```
+
+###Function to compute the expected nearest neighbor mean distance for a CSR process
+```{r}
+mean.expnnd <- function(l) { 
+	mean.value<- 1 / (2 * sqrt(l)) 
+	#cat("The expected mean is",mean.value)
+	return (mean.value)
+	}
+```
+
+```{r}
+##mean.expnnd(lambda.uganda)
+```
+
+```{r}
+##mean.expnnd(lambda.gordon)
+```
+
+
+###Function to compute the variance and standard error for a CSR process
+
+```{r}
+Stderror <- function(l,m) { 
+	varvalue<- (4-pi) / (4*l*pi*m)
+	vstderror<- sqrt(varvalue)
+	
+	#cat("The variance is",varvalue, "\n") 
+	
+	#cat("The standard error is",sterror)
+	return (vstderror)
+	
+	}
+```
+
+```{r}
+##Stderror(lambda.uganda, uganda.ppp$n)
+```
+
+```{r}
+##variance(lambda.gordon,gordon$n )
+```
+
+###Computation of zscore for Uganda and Gordon
+
+
+
+```{r}
+zscore <- function(ptpattern) {
+  lambda<- summary(ptpattern)$intensity
+  np <- ptpattern$n
+  zvalue <- ((mean.obsnnd(c(nndist(ptpattern))) - mean.expnnd(lambda)))/Stderror(lambda, np)
+return(zvalue)
+}
+```
+
+
+```{r}
+#zscore (uganda.ppp)
+```
+
+```{r}
+#zscore (gordon)
+```
+
+
+##Function to compute P_value
+
+
+```{r}
+Pvalue <- function(valuezscore, alpha){
+if (valuezscore < 0) { 
+  pv <- pnorm(valuezscore)
+  cat ("The P_value is", pv, "\n")
+}else{
+  pv <- 1-pnorm(valuezscore)
+  cat ("The P_value is", pv, "\n")
+}
+
+if (pv< alpha){
+  cat("Rejection of the CSR \n")
+}else{
+  cat("Failure to reject the CSR \n")}
+}
+```
+
+
+```{r}
+#Pvalue(zscore (uganda.ppp), 0.05)
+```
+
+```{r}
+#Pvalue(zscore (gordon), 0.05)
+```
+
+
+
+```{r}
+Main <- function (PointPattern, alpha) {
+cat("The observed mean is", mean.obsnnd(c(nndist(PointPattern))),"\n") 
+lambda <- summary(PointPattern)$intensity  
+cat("The expected mean is", mean.expnnd(lambda),"\n")
+Stde <- Stderror(lambda, PointPattern$n)
+cat("The variance is", Stde*Stde,"\n" )
+zval <- zscore (PointPattern)
+cat("The Z-score is ", zval ,"\n")
+Pvalue(zval, alpha)
+} 
+```
+
+```{r}
+Main(gordon, 0.05)
+```
+```{r}
+Main(uganda.ppp, 0.05)
+```
+
+
+
+
+###Check the intensity of each point pattern
+
+```{r}
+initialbwuganda= bw.diggle(uganda.ppp)
+```
+
+```{r}
+initialbwgordon= bw.diggle(gordon)
+```
+
+```{r}
+plot(density(uganda.ppp, initialbwuganda))
+```
+
+```{r}
+plot(density(gordon, initialbwgordon))
+```
+
+```{r}
+otherbwuganda1= bw.CvL(uganda.ppp)
+```
+
+
+```{r}
+otherbwuganda2= bw.scott(uganda.ppp)
+```
+
+```{r}
+otherbwuganda3= bw.ppl(uganda.ppp)
+```
+
+```{r}
+plot(density(uganda.ppp, otherbwuganda1))
+```
+
+
+```{r}
+plot(density(uganda.ppp, otherbwuganda2))
+```
+
+
+```{r}
+plot(density(uganda.ppp, otherbwuganda3))
+```
+
+
+
+```{r}
+otherbwgordon1= bw.CvL(gordon)
+```
+
+```{r}
+otherbwgordon2= bw.scott(gordon)
+```
+
+```{r}
+otherbwgordon3= bw.ppl(gordon)
+```
+
+```{r}
+plot(density(gordon, otherbwgordon1))
+```
+
+```{r}
+plot(density(gordon, otherbwgordon2))
+```
+
+```{r}
+plot(density(gordon, otherbwgordon3))
+```
+
+
+###Test second order effects using Ghat and Khat
+##Run simulations for Ghat: 
+
+
+```{r}
+Gest(gordon, r=NULL, breaks=NULL, correction=c("rs", "km", "han"),domain=NULL)
+```
+
+```{r}
+Ggordon <- Gest(gordon, r=NULL, breaks=NULL, correction=c("rs", "km", "han"),domain=NULL)
+plot(Ggordon)
+```
+
+
+```{r}
+Gest(uganda.ppp)
+```
+
+
+```{r}
+Guganda <- Gest(uganda.ppp)
+plot(Guganda)
+```
+
+
+
+```{r}
+ugandaG.env<-envelope(uganda.ppp, fun=Gest, nsim=19, global =TRUE)
+plot(ugandaG.env)
+```
+
+
+```{r}
+gordonG.env<-envelope(gordon, fun=Gest, nsim=19, global =TRUE)
+plot(gordonG.env)
+```
+
+
+###Run simulations for Lhat:
+
+```{r}
+Lgordon <- Lest(gordon)
+plot(Lgordon)
+```
+
+
+```{r}
+Luganda<- Lest(uganda.ppp)
+plot(Luganda)
+```
+
+
+```{r}
+ugandaL.env<-envelope(uganda.ppp, fun=Lest, nsim=19, global =TRUE)
+plot(ugandaL.env)
+```
+
+
+```{r}
+gordonL.env<-envelope(gordon, fun=Lest, nsim=19, global =TRUE)
+plot(gordonL.env)
+```
+
+
+```{r}
+plot(ugandaL.env, .-r ~ r)
+```
+
