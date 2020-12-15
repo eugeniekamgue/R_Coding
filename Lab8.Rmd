@@ -1,0 +1,179 @@
+---
+title: "Lab8"
+author: "Valerie Kamgue"
+date: "11/24/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(foreign)
+library(fields)
+library(classInt)
+library(RColorBrewer)
+library(sp)
+library(spdep)
+library(rgdal)
+library(ggplot2)
+```
+
+
+##Part1: Median Polish
+
+```{r}
+phyto<-read.csv("C:/Users/valer/Desktop/SIE512/Labs/Lab8/Lab82019/phytophthora.csv")
+summary(phyto)
+
+```
+
+
+##Create a plot of the soilm variable and include it in your lab report.
+
+```{r}
+ggplot(phyto, aes(x=X, y=Y, size =soilm, col=soilm))+ scale_color_gradient(low="darkgreen", high="yellow")+ geom_point() + ggtitle("Soil Moisture")
+```
+
+
+
+##Use the medpolish function to perform the median polish on soil moisture content. 
+##Include the image in your lab report and describe any spatial patterns in this image
+
+```{r}
+phyto.mat<-matrix(phyto$soilm, nrow=20)
+```
+
+```{r}
+image.plot(phyto.mat, col=terrain.colors(24)) #original data
+```
+
+
+
+```{r}
+phyto.polish<-medpolish(phyto.mat)
+```
+
+
+```{r}
+phyto.polish$overall
+```
+
+
+```{r}
+phyto.polish$row
+```
+
+
+```{r}
+phyto.polish$col
+```
+
+
+```{r}
+phyto.polish$residuals
+```
+
+
+
+
+```{r}
+plot(phyto.polish$row)
+```
+
+
+```{r}
+plot(phyto.polish$col)
+```
+
+
+```{r}
+plot(phyto.polish$residuals)
+```
+
+
+```{r}
+plot(phyto.polish$overall)
+```
+
+
+
+##Subtract the median polish residuals from the original data to capture the signal (trend) and plot it.
+
+```{r}
+phyto.trend<-phyto$soilm-phyto.polish$residuals
+```
+
+```{r}
+image.plot(phyto.trend, col=terrain.colors(24)) #trend in the data
+```
+
+
+
+```{r}
+image.plot(phyto.polish$residuals) #residuals
+```
+
+
+
+##Part 2: Constructing Correlograms
+
+```{r}
+dha=readOGR(dsn = "C:/Users/valer/Desktop/SIE512/Labs/Lab8/Lab82019",layer = "dhapol")
+```
+
+
+```{r}
+dha.nbr <- poly2nb(dha) #Create a neighbors file with poly 2nb
+```
+
+
+```{r}
+lung <- dha$LUNG_CAN_S
+breast <- dha$BREAST_CN_
+heartatt <- dha$MYC_INF_SM
+```
+
+
+##Create a correlogram for each of these variable
+
+```{r}
+mlung <- sp.correlogram(dha.nbr, lung, order=8, method="I", zero.policy = TRUE)
+```
+
+```{r}
+mbreast <- sp.correlogram(dha.nbr, breast, order=8, method="I", zero.policy = TRUE)
+```
+
+```{r}
+mheartatt <- sp.correlogram(dha.nbr, heartatt, order=8, method="I", zero.policy = TRUE)
+```
+
+
+##plot each correlogram
+
+```{r}
+plot(mlung, main="Moran's I Correlogram for Lung Cancer")
+```
+
+
+```{r}
+plot(mbreast, main="Moran's I Correlogram for Breast Cancer")
+```
+
+
+```{r}
+plot(mheartatt, main="Moran's I Correlogram for Heart Attack ")
+```
+
+
+
+
+
+
+
+
+
+
+
