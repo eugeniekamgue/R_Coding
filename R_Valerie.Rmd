@@ -1,0 +1,165 @@
+---
+title: "Midterm3"
+author: "Valerie Kamgue"
+date: "11/9/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(maptools)
+library(sp)
+library(classInt)
+library(RColorBrewer)
+library(gstat)
+library(lmtest)
+library(tseries)
+library(ggplot2)
+library(rgdal)
+library(spatstat)
+library(splancs)
+```
+
+
+```{r}
+Plants <- dget("C:/Users/valer/Desktop/SIE512/Mid-term/MidTermData2019/duneplants")
+```
+
+
+```{r}
+crepsis<-split(Plants)$crep
+plot(Plants$window, main="Crepsis_Sp")
+points(crepsis, pch=16, col="green")
+```
+
+
+
+```{r}
+Oenothera <- split(Plants)$oeno
+plot(Plants$window, main="Oenothera_Sp")
+points(Oenothera, pch=16, col="orange")
+```
+
+
+
+```{r}
+violacart <- split(Plants)$viola
+plot(Plants$window, main="Viola Cartesii")
+points(violacart, pch=16, col="blue")
+```
+
+
+```{r}
+plot(Plants$window, main="Oenothera_Sp, Crepsis_Sp and Viola Cartesii") 
+points(Oenothera, pch=16, col="orange") 		
+points(crepsis, pch=16, col="green")
+points(violacart, pch=16, col="blue")
+```
+
+
+
+```{r}
+Lcrespsis <-Lest(crepsis)
+plot(Lcrespsis, cbind(iso,trans,border, theo)-r ~ r, col=c(2,3,4,1), lty=c(1,1,1,2), main="Crepsis_Sp LFunction", legend=F)
+legend("right" ,legend=c("iso","trans","border", "theo"), col=c(2,3,4,1), lty=c(1,1,1,2), box.lty=0)
+```
+
+
+
+```{r}
+Loeno <-Lest(Oenothera)
+plot(Loeno, cbind(iso,trans,border, theo)-r ~ r, col=c(2,3,4,1), lty=c(1,1,1,2), main="Oenothera_Sp LFunction", legend=F)
+legend("topleft" ,legend=c("iso","trans","border", "theo"), col=c(2,3,4,1), lty=c(1,1,1,2), box.lty=0)
+```
+
+
+```{r}
+Lviola<-Lest(violacart)
+plot(Lviola, cbind(iso,trans,border, theo)-r ~ r, col=c(2,3,4,1), lty=c(1,1,1,2), main="Viola Cartesii LFunction", legend=F)
+legend("right" ,legend=c("iso","trans","border", "theo"), col=c(2,3,4,1), lty=c(1,1,1,2), box.lty=0)
+```
+
+
+
+```{r}
+envcrespsis = envelope(crepsis, Lest, 39, global=T)
+plot(envcrespsis, cbind(obs,hi,lo,theo)-theo ~theo, col=c(2,1,1,4),lwd=c(2,1,1,1),main ="Crepsis_Sp",legend= F)
+legend("right" ,legend=c("obs","hi","lo", "theo"), col=c(2,1,1,4), lwd=c(2,1,1,1),lty=c(1,1,1,2), box.lty=0)
+
+```
+
+
+```{r}
+envoeno = envelope(Oenothera, Lest, 39, global=T)
+plot(envoeno, cbind(obs,hi,lo,theo)-theo ~theo, col=c(2,1,1,4),lwd=c(2,1,1,1),main ="Oenothera_Sp",legend= F)
+legend("right" ,legend=c("obs","hi","lo", "theo"), col=c(2,1,1,4), lwd=c(2,1,1,1),lty=c(1,1,1,2), box.lty=0)
+
+```
+
+
+```{r}
+enviola = envelope(violacart, Lest, 39, global=T)
+plot(enviola, cbind(obs,hi,lo,theo)-theo ~theo, col=c(2,1,1,4),lwd=c(2,1,1,1),main ="Viola Cartesii",legend= F)
+legend("right" ,legend=c("obs","hi","lo", "theo"), col=c(2,1,1,4), lwd=c(2,1,1,1),lty=c(1,1,1,2), box.lty=0)
+```
+
+
+
+```{r}
+plot(envcrespsis, cbind(obs,hi,lo,theo)-theo ~theo, col=c(2,1,1,4),lwd=c(2,1,1,1),main ="Crepsis_Sp, Oenothera_Sp and Viola Cartesii ",legend= F)
+plot(envoeno, cbind(obs,hi,lo,theo)-theo ~theo, col=c(3,1,1,4),lwd=c(2,1,1,1),legend=FALSE, add=TRUE)
+plot(enviola, cbind(obs,hi,lo,theo)-theo ~theo, col=c(6,1,1,4),lwd=c(2,1,1,1),legend=FALSE, add=TRUE)
+legend("right" ,legend=c("Crepsis", "Oenothera", "Viola"), col=c(2,3,6),lwd=c(2,2), lty=c(1,1), box.lty=0)
+
+```
+
+
+```{r}
+LCspecies1 <- Lcross(Plants, "crep", "oeno")
+plot(LCspecies1,.-r ~r, lty= c(1,1,1,2), col=c(4,5,6,1), main="LCross of Crepsis and Oenothera", legend=F)
+legend("top" ,legend=c("iso","trans","border", "theo"), col=c(4,5,6,1), lty=c(1,1,1,2), box.lty=0)
+
+```
+
+
+
+```{r}
+LCspecies2 <- Lcross(Plants, "crep", "viola")
+plot(LCspecies2,.-r ~r, lty= c(1,1,1,2), col=c(4,5,6,1), main="LCross of Crepsis and Viola", legend=F)
+legend("top" ,legend=c("iso","trans","border", "theo"), col=c(4,5,6,1), lty=c(1,1,1,2), box.lty=0)
+
+```
+
+
+```{r}
+LCspecies3 <- Lcross(Plants, "oeno", "viola")
+plot(LCspecies3,.-r ~r, lty= c(1,1,1,2), col=c(4,5,6,1), main="LCross of Oenothera and Viola", legend=F)
+legend("top" ,legend=c("iso","trans","border", "theo"), col=c(4,5,6,1), lty=c(1,1,1,2), box.lty=0)
+```
+
+
+
+
+```{r}
+envCspecies1 <- envelope(Plants, Lcross, i="crep", j="oeno", 39,  simulate=expression(rshift(Plants, edge="torus")))
+plot(envCspecies1, .-mmean ~mmean, col=c(2,1,1,4),lwd=c(2,1,1,1), main="LCross Envelope Crepsis and Oenothera", legend=F)
+```
+
+
+
+```{r}
+envCspecies2 <- envelope(Plants, Lcross, i="crep", j="viola", 39,  simulate=expression(rshift(Plants, edge="torus")))
+plot(envCspecies2, .-mmean ~mmean, col=c(2,1,1,4),lwd=c(2,1,1,1), main="LCross Envelope Crepsis and Viola", legend=F)
+```
+
+
+
+```{r}
+envCspecies3 <- envelope(Plants, Lcross, i="oeno", j="viola", 39,  simulate=expression(rshift(Plants, edge="torus")))
+plot(envCspecies3, .-mmean ~mmean, col=c(2,1,1,4),lwd=c(2,1,1,1), main="LCross Envelope Oenothera and viola", legend=F)
+```
+
