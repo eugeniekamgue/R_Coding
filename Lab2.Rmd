@@ -1,0 +1,243 @@
+---
+title: "Lab2"
+author: "Valerie Kamgue"
+date: "9/22/2019"
+output: word_document
+---
+
+```{r}
+library(tmap)
+library(ggplot2)
+library(spdep)
+library(raster)
+```
+
+###Reading of the two shapefiles (CaliforniaUTM (boundary polygon) and CalPointsUTM (the set of weather station locations) using st_read. 
+
+```{r}
+calpoly=st_read(dsn ="C:/Users/valer/Desktop/SIE512/Labs/Lab2/Lab2Data_2019/CaliforniaUTM.shp")
+calpoints=st_read(dsn="C:/Users/valer/Desktop/SIE512/Labs/Lab2/Lab2Data_2019/CalPointsUTM.shp")
+```
+
+###summary(calpoints)
+Create a map of precipitation values Below are some tmap functions for displaying precipitation values measured at point locations. The state of California (calpoly) provides geographic context and the station file (calpoints) provides the location of the sampling points.
+
+```{r}
+tm_shape(calpoly) + tm_borders()+tm_layout(frame=F)+tm_shape(calpoints) +
+    tm_bubbles("Precipitat", scale=2, col="blue")
+```
+
+
+###Below is another variation. Try combinations of tmap functions to create a map you like for inclusion in your lab report.
+
+```{r}
+tm_shape(calpoly) + tm_borders()+tm_layout(frame=F)+tm_shape(calpoints) +
+    tm_bubbles("Precipitat", col="Precipitat", style="jenks", title.size = "Rainfall Stations in California", title.col = "Values in inches")
+```
+
+###In your lab report provide a short description of any patterns you see in the precipitation values over the state.
+
+It appears from the map that it rains more in Northern and centre California than Southern and East California.The rainfall stations in northern and centre California record higher precipitation values than southern and East California
+
+
+###Create a histogram Create a histogram of precipitation. To use ggplot you first need to convert the calpoints file which is a spatial dataframe to a dataframe.
+
+```{r}
+caldf<-as.data.frame(calpoints) # convert spatial point dataframe to data frame
+ggplot(data= caldf, aes(Precipitat)) + geom_histogram(bins=8,col='black',fill='blue')+xlab("Annual Precipitation in inches")+ ggtitle("Annual Precipitation Histogram")
+```
+
+
+```{r}
+summary(caldf)
+```
+
+
+###Using ggplot information from the previous lab, add a normal curve to the histogram.
+Include the precipitation histogram in your lab report. Describe your assessment of the distribution of the precipitation values.
+
+```{r}
+ggplot(data=caldf, aes(Precipitat)) + geom_histogram( bins=10,col='black',fill='lightblue',aes(y = ..density..))+xlab("Annual Precipitation in inches")+xlim(c(-10,80))+ggtitle("Annual Precipitation Histogram")+
+  stat_function(fun = dnorm, colour = "red",
+                args = list(mean = mean(caldf$Precipitat, na.rm = TRUE),sd = sd(caldf$Precipitat, na.rm = TRUE)))
+```
+
+
+###Create scatterplots Create scatter plots of precipitation against each of the explanatory variables: altitude, latitude, and distance from coast. The code below gives an example.Include the three scatterplots in your lab report and describe any relationship you see between precipitation and the variables: Altitude, Latitude and Distance from coast.
+
+```{r}
+ggplot(caldf, aes(x=Altitude, y=Precipitat)) + geom_point(col='red') +ylab("Precipitation")+ geom_smooth(method=lm, se=FALSE)
+```
+
+```{r}
+ggplot(caldf, aes(x=Latitude, y=Precipitat)) + geom_point(col='red') +ylab("Precipitation")+ geom_smooth(method=lm, se=FALSE)
+```
+
+
+```{r}
+ggplot(caldf, aes(x=Distance_f, y=Precipitat)) + geom_point(col='red') +ylab("Precipitation")+ geom_smooth(method=lm, se=FALSE)
+```
+
+The scatters plots show that precipitation increases with the altitude and latitude but decreases when the distance from the coast increases.
+
+
+###Compute correlation statistics
+
+Compute the correlation between precipitation and each of the three explanatory variables using the cor() function and describe your assessment of these correlation with respect to the scatter plots. Example for Altitude.
+
+```{r}
+rP_A<-cor(calpoints$Precipitat, calpoints$Altitude)
+rP_A
+```
+```{r}
+rP_L<-cor(calpoints$Precipitat, calpoints$Latitude)
+rP_L
+```
+```{r}
+rP_D<-cor(calpoints$Precipitat, calpoints$Distance_f)
+rP_D
+```
+The correlation between precipitation and altitude is 0.3 which is positive as the trendline rises from the lower left corner to the upper right side.The correlation between precipitation and latitude equals to 0.576 which is also positive but this correlation is greater than the first one that is why the bestfitted line rises more steeply.
+The correletion between precipitation and distance from coast is -0.21 which is negative as the trendline drops from the upper left corner to the lower right.
+
+
+###Construct a multiple regression model: Set the dependent variable to Precipitation and Altitude, Latitude, and Distance from Coast as the independent variables. The R function lm sets up the linear regression model. help (lm) provides a description of the function.
+
+```{r}
+lm.precip<-lm(Precipitat~ Altitude+Latitude+Distance_f, data=calpoints)
+summary(lm.precip)   # reports the regression results
+```
+
+###In your lab report discuss how well this model describes precipitation. Indicate what percent of variation is explained by the model and describe which variables are significant at a 95 percent confidence level in terms of explaining the variation in precipitation..
+
+The multiple regression model equation is the following:
+Precipitation = -1.024e+02 + 4.091e-03Altitude + 3.452Latitude - 1.429e-01Distance_f
+60.04% of variance in Altitude, Latitude and Distance from the coast is explained by the precipitation.
+The p-value of 2.197e-05 is smaller than 0.05, therefore it is highy significant and shows that there is a strong correlation between precipitation and at least one of the independant variable.
+Latitude has the highest t value of 4.343 and the greater b of 3.452, though it is the most significant independant variable followed by Altitude and Distance from the coast.
+The Distance_f is not stastically significant at 95% of confidence level because of his negative b and negative t value, it can be removed from the model.
+
+###Create confidence intervals for the parameter estimates. Use the qt function (gives quantiles of the student’s T distribution) to get the critical value for 95% confidence interval with the regression degrees of freedom.
+cv=qt(.975,df) # quantiles of students t- in place of df insert a number for degrees of freedom.
+
+```{r}
+confint(lm.precip)
+```
+
+```{r}
+cv=qt(0.975,26)
+```
+
+The critical value for 95% confidence interval is 2.055
+
+###The following functions retrieve the coefficients and standard errors from the regression result. From these (pe and ces) work out a formula for the confidence intervals pe=lm.precip$coefficients,  ces=coef(summary(lm.precip))[, 2]
+Report confidence intervals for the 3 parameter estimates (altitude, latitude and distance_from coast).
+Check each of the residual plots The residuals represent the component of variation in the response (dependent) variable that cannot be explained by variation in the explanatory (independent) variables. Study of the residuals can indicate outliers, potential problems in the model, and potentially indicate other variables that might be used to improve the predictive capacity of the regression model.
+
+```{r}
+pe=lm.precip$coefficients
+```
+```{r}
+ces=coef(summary(lm.precip))[, 2]
+```
+
+
+###In examining the residuals, we are interested in determining if there are any patterns in the residuals. Standardized residuals should have zero mean and unit (constant) variance over the whole range of the observed independent terms, and over the range of the fitted values. In other words with respect to the variance there should not be a variation in the spread of the residuals. Residuals with non-constant variance are said to be heteroscedastic. The plot.lm function plots four default plots. Including the which parameter lets you plot specific plots. i.e. which =1 is the residuals versus fit plot, which = 2 is the q-q plot. which = 5 is cooks distance plot
+Include the plot of residual vs fit (fitted values) in your lab report. Evaluate the plot of the fitted values against the residuals and provide an assessment of any patterns in the residuals. Example for residals vs fitted value plot is below.
+
+```{r}
+stations=(calpoints$NAME) # adds labels
+plot(lm.precip, which=1 ,pch=16, labels.id=stations)
+```
+
+
+```{r}
+stations=(calpoints$NAME) # adds labels
+plot(lm.precip, which=2 ,pch=16, labels.id=stations)
+```
+
+
+
+```{r}
+stations=(calpoints$NAME) # adds labels
+plot(lm.precip, which=5 ,pch=16, labels.id=stations)
+```
+
+Check for normality in the residuals using the Normal QQ plot and indicate your assessment of how well they meet this condition. To support your assessment of normality and constant variance, compute skewness and kurtosis values for the residuals along with these tests: Breusch-Pagan and Non-constant variance tests for heteroskadasticty and Jarque-Bera test and Shapiro Wilk test for normality
+Report and discuss these results in your lab.
+Check for leverage/influence of points using the Cooks distance plot and indicate your assessment of any problematics points.
+Additionally residuals should not be spatially correlated. In this case we would want to determine if similar or similarly signed residuals tend to group spatially (eg. clusters of positive residuals in one area and negative in another). If such a pattern is apparent, then the assumption of residual independence may be violated. Variations on spatial lag plots can be generated using the k nearest neighbor and knn2nb from the spdep package.
+
+```{r}
+cal.knn <- knearneigh(calpoints, k=2) # nearest neighbors
+nb=knn2nb(cal.knn) # convert to neighbor object
+resnb <- sapply(nb, function(x) (lm.precip$residuals[x[2]])) #get residual value of nearest neighbor
+plot(lm.precip$residuals, resnb, pch=16, xlab='Residuals', ylab='Adjacent residuals')
+```
+
+
+###Considering the lag plot, discuss any indication of spatial dependence.
+Map the residuals: To evaluate possible spatial patterns in the residuals it is also useful to map them. To do this, extract the vector of residuals from the regression results and add the residuals vector to the calpoints spatial data frame creating a new file, calnew.
+
+```{r}
+resids <-lm.precip$res
+calnew=calpoints
+calnew$resids <- resids
+summary(calnew)
+```
+
+
+Create a standard deviation plot of the residuals that is centered on the mean and plots positive residuals in one color and negative residuals in another color. Specify the resids variable as the variable to plot.
+
+```{r}
+tm_shape(calpoly) + tm_borders()+tm_layout(frame=F)+tm_shape(calnew) +
+    tm_bubbles(col="resids", style="sd", palette="RdBu", title.col = "Residuals")
+```
+
+Include your residual map and describe any indications of spatial dependence you see in this map.
+Taylor suspected that a rain shadow effect was contributing to rainfall variation. The rain shadow is identified as locations on the leeward side (in this case eastern side) of mountains where moisture from the ocean is lost. On the windward side of the mountains in California the air rises up and moisture is effectively squeezed out. Cool air descending on the leeward side is thus dry with reduced precipitation potential.
+Next combine the residuals with elevation data to see if Taylor’s hypothesis has some merit.
+The elevation image is an ascii file. Read it in with the base raster function. To make sure the layers align, project the elevation data to the same projection as the station file. Elevation is displayed with the terain colors palette and residuals are added on top using the tmap tm_dots function.
+
+```{r}
+calelevation= raster("C:/Users/valer/Desktop/SIE512/Labs/Lab2/Lab2Data_2019/calraster.asc")
+cproj="+proj=utm +zone=10 +datum=NAD83 +units=m +no_defs"
+tm_shape(calelevation, projection = cproj) +tm_raster(style="order",title="Elevation", palette = terrain.colors(10))+ tm_shape(calnew) + tm_dots(col="resids", size=.4,style="sd", palette="RdBu", title = "Residuals")
+```
+
+
+
+From the combined plot describe any evidence of a rain shadow.
+Create boxplots to compare precipitation grouped by rainshadow. To create the boxplot you want the rainshadow to be type factor - it is currently type numeric (check this with class(caldf$Rainshadow). Using the function as.factor in gglpot will cast it to a factor
+(Check the function you used to create boxplots in Lab 1). Using the boxplot comment on the differences in the two groups.
+Run a new regression model with the rainshadow variable. Refer to the functions used above to generate the regression model and display the results. Include the residual vs fitted, qq, and Cooks distance plots. Then plot the new residuals on the elevation image as above. Provide a short discussion of the results of this new model. in terms of the regression results and the residual plot diagnostics.
+
+```{r}
+model2=lm(formula = Precipitat ~ Altitude + Latitude + Distance_f + 
+    Rainshadow, data = calpoints)
+summary(model2)
+```
+
+###Check residual vs fitted
+
+```{r}
+stations=(caldf$NAME)
+plot(model2, which=1, pch=16,labels.id=stations)
+```
+
+
+###Extract residuals from the new model and add to a new dataframe
+
+```{r}
+resids2 <-model2$residuals
+calmodel2=calpoints
+calmodel2$resids2 <- resids2
+```
+
+###Create a new map of residuals
+
+```{r}
+tm_shape(calelevation, projection = cproj) +tm_raster(style="order",title="Elevation", palette = terrain.colors(10))+ tm_shape(calmodel2) + tm_dots(col="resids2", size=.4,style="sd", palette="RdBu", title = "Residuals")
+```
+
+
