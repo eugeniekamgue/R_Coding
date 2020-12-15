@@ -1,2 +1,2 @@
 # R_Coding
-Programming in R, Statistics, Spatial Data
+Programming in R, Statistics, Spatial Data Analysis
