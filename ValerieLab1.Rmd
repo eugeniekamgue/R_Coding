@@ -1,0 +1,296 @@
+---
+title: "SIE512 Lab 1 Exploratory data Analysis with R "
+author: "Valerie Kamgue"
+date: "9/15/2019"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###First install some packages. If you have previously installed them you do not need to reinstall.
+•	ggplot2
+•	e1071
+•	plyr
+•	knitr
+###Then load them.
+```{r}
+library(ggplot2) # for creating graphics
+library(e1071) # a package with skewness and kurtosis functions
+library(plyr) #a package to manage grouping function
+library(knitr) # package to render markdown
+```
+
+
+
+###Reading in data
+Use the function setwd (“include the path to your directory here in quotes”) to point to the directory where you saved the Lab 1 data file. You can use the dir() function to check for the presence of the data file.
+Use the read.csv () function to read in the data.
+The file name needs to be added exactly as it appears in your directory.
+
+
+```{r}
+setwd("C:/Users/valer/Desktop/SIE512/Labs/Lab1")
+buoydata<-read.csv("CombinedAEMDataJun2015.csv")
+```
+
+###Getting information about the data
+A data table (converted from the csv file) is an object of type “data frame” in R. The class function will confirm this. These next functions (through summary(buoydata)) are for your information and not required in your lab.
+I have used results=“hide” in the code blocks below to hide the results/output but display the code. You will want to remove results=“hide” to display results.
+
+```{r}
+class(buoydata)
+```
+
+```{r}
+names(buoydata)
+```
+
+
+```{r}
+head(buoydata)
+```
+
+
+```{r}
+nrow(buoydata)
+```
+
+
+summary(buoydata) # provides a statistical summary of the file
+```{r}
+summary(buoydata)
+```
+
+###Use the ddply function from the plyr library to create statistical summaries for salinity and temperature and include these in your lab report. 
+The example below is for salinity. The function ddply takes a dataframe as input, splits it into pieces based on one or more factors (in this case by the column “Buoy”), computes on the pieces (in this case applies the summary function), then returns the results as a data.frame. The $ is used to refer to columns in the data frame. Add an r code chunk to repeat these steps for temperature in your markdown file and include a short text section to describe the results.
+options(digits = 3) # does rounding to 3 digits
+
+```{r}
+saldframe=ddply(buoydata, .(Buoy), function(x) summary(x$salinity.psu..1m.))
+```
+
+Render the dataframe with the kable function
+
+```{r}
+kable(saldframe)
+```
+
+```{r}
+temdframe=ddply(buoydata, .(Buoy), function(x) summary(x$temperature.C..1m.))
+```
+```{r}
+kable(temdframe)
+```
+
+###Generate and report the skewness and kurtosis values for salinity and temperature for each buoy. 
+Include these functions in r code chunks and include text descriptions in text blocks. The example is for salinity - repeat for temperature.
+
+###Compute skew.
+
+```{r}
+sskew=ddply(buoydata, .(Buoy), function(x) skewness(x$salinity.psu..1m.))
+```
+```{r}
+tskew=ddply(buoydata, .(Buoy), function(x) skewness(x$temperature.C..1m.))
+```
+
+
+###Compute Kurtosis, put the results together, and display in a table.
+
+```{r}
+skur=ddply(buoydata, .(Buoy), function(x) kurtosis(x$salinity.psu..1m.))
+```
+
+```{r}
+tkur=ddply(buoydata, .(Buoy), function(x) kurtosis(x$temperature.C..1m.))
+```
+
+saldf=cbind(sskew,skur) # combine the data frames
+```{r}
+saldf=cbind(sskew,skur)
+temdf=cbind(tskewt,tkur)
+```
+
+
+```{r}
+colnames(saldf) <- c("Buoy","Skewness", "Kurtosis")
+```
+```{r}
+colnames(temdf) <- c("Buoy","Skewness", "Kurtosis")
+```
+
+```{r}
+kable(saldf)
+```
+
+```{r}
+kable(temdf)
+```
+
+
+###Report skewness and kurtosis for the overall distribution of salinity and temperature.
+```{r}
+salskew=skewness(buoydata$salinity.psu..1m.)
+tempskew=skewness(buoydata$temperature.C..1m.)
+salkur=kurtosis(buoydata$salinity.psu..1m.)
+tempkur=kurtosis(buoydata$temperature.C..1m.)
+sumbuoy=cbind(salskew, salkur, tempskew, tempkur)
+colnames(sumbuoy) <- c("SalinitySkew","Salinity Kurtosis", "Temperature Skew","Temperature Kurtosis")
+kable(sumbuoy)
+```
+
+
+###Creating Histograms
+Create a histogram of the salinity data for all buoys using ggplot. For ggplot, you need to specify what dataframe to use and what column(s) should be used for the X and Y axis. The aes() function is used to specify the X and Y axes. To get an outcome you have to specify the type of geometry or graph you want (e.g. geom_point(), geom_bar()). For a histogram, specify geom_histogram(). For a histogram you only need to specify the x axis variable since the y axis is a count by default. The following code gives you a basic histogram for salinity for all buoys.
+ggplot(data=buoydata, aes(salinity.psu..1m.)) + geom_histogram()
+
+```{r}
+ggplot(data=buoydata, aes(salinity.psu..1m.)) + geom_histogram()
+```
+
+
+You can modify a ggplot histogram by changing colors, number of bins, xlim, ylim and adding a title and axis labels. For example, the ggplot function below changes the fill color to white with a black outline by specifying col and fill parameters in the geom_histogram function. You can also modify the plot by adding elements. You do this with the + symbol. You can add a plot title and labels for X and Y axis by using the labs() function with title, x and y arguments. Or alternatively you can use ggtitle(), xlab() and ylab(). For example below we change the default x axis label by adding xlab(“Salinity in psu at 1 meter”), add a limit on the x axis with xlim() a limit between 29 and 32.5, (the approximate range of salinity values), and add a title using ggtitle().
+
+```{r}
+ggplot(data=buoydata, aes(salinity.psu..1m.)) + geom_histogram(col='black',fill='white')+xlab("Salinity in psu for 1 meter")+xlim(c(29,32.5))+ggtitle("Salinity Histogram for all Buoys")
+```
+
+
+By default the y axis is a count but it can be changed to density. To do this, add an aes parameter inside the geom_histogram function that sets y to density. It can be changed back to count with aes(y =..count..).
+The plot information can be assigned to a variable and additional plot items then added to this variable. Below we assign the plot to the variable g1 and then add a title to g1. This plot also demonstrates adding a normal curve (using stat_function and the mean and standard deviation of salinity) to the plot.
+
+```{r}
+g1<-ggplot(buoydata, aes(salinity.psu..1m.)) +
+    geom_histogram(aes(y = ..density..)) +
+    stat_function(fun = dnorm, colour = "red",
+                  args = list(mean = mean(buoydata$salinity.psu..1m., na.rm = TRUE),sd = sd(buoydata$salinity.psu..1m., na.rm = TRUE)))
+    g1+ggtitle("Salinity distribution for all buoys")
+```
+
+First create an overall histogram by using or modifying the example code below. You can experiment with the ggplot parameters, select a result you like and include the selected histogram in your lab report
+
+```{r}
+ggplot(data=buoydata, aes(salinity.psu..1m.)) + geom_histogram( col='black',fill='lightblue',aes(y = ..density..))+xlab("Salinity in psu for 1 meter")+xlim(c(27,33.5))+ggtitle("Salinity Histogram for all Buoys")+
+  stat_function(fun = dnorm, colour = "red",
+                args = list(mean = mean(buoydata$salinity.psu..1m., na.rm = TRUE),sd = sd(buoydata$salinity.psu..1m., na.rm = TRUE)))
+```
+
+
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+## Warning: Removed 2 rows containing missing values (geom_bar).
+Create histograms for individual buoys (A, E, I, M) for salinity and temperature by using/modifying the example code below. Add a normal curve with the mean and standard deviation for each buoy. In your lab report provide a brief description of each buoy’s salinity distribution considering it’s histrogram and skewness and kurtosis values.
+Repeat the creation of histograms for each buoy for Temperature and provide brief discussions on the temperature distributions of each buoy.
+
+```{r}
+gASal<-ggplot(subset(buoydata,Buoy=="A"), aes(salinity.psu..1m.)) +
+  geom_histogram(col='black', fill='white',aes(y = ..density..)) + xlab("Salinity in psu for 1 meter")+xlim(c(29,33.5))+
+  stat_function(fun = dnorm, colour = "red",
+                args = list(mean = mean(buoydata$salinity.psu..1m.[buoydata$Buoy=="A"], na.rm = TRUE),sd = sd(buoydata$salinity.psu..1m.[buoydata$Buoy=="A"], na.rm = TRUE)))
+gASal+ggtitle("Salinity distribution for Buoy A")
+```
+
+
+```{r}
+gESal<-ggplot(subset(buoydata,Buoy=="E"), aes(salinity.psu..1m.)) +
+  geom_histogram(col='black', fill='white',aes(y = ..density..)) + xlab("Salinity in psu for 1 meter")+xlim(c(29,33.5))+
+  stat_function(fun = dnorm, colour = "red",
+                args = list(mean = mean(buoydata$salinity.psu..1m.[buoydata$Buoy=="E"], na.rm = TRUE),sd = sd(buoydata$salinity.psu..1m.[buoydata$Buoy=="E"], na.rm = TRUE)))
+gESal+ggtitle("Salinity distribution for Buoy E")
+
+```
+
+
+
+```{r}
+gMSal<-ggplot(subset(buoydata,Buoy=="M"), aes(salinity.psu..1m.)) +
+  geom_histogram(col='black', fill='white',aes(y = ..density..)) + xlab("Salinity in psu for 1 meter")+xlim(c(29,33.5))+
+  stat_function(fun = dnorm, colour = "red",
+                args = list(mean = mean(buoydata$salinity.psu..1m.[buoydata$Buoy=="M"], na.rm = TRUE),sd = sd(buoydata$salinity.psu..1m.[buoydata$Buoy=="M"], na.rm = TRUE)))
+gMSal+ggtitle("Salinity distribution for Buoy M")
+
+```
+
+
+```{r}
+gATem<-ggplot(subset(buoydata,Buoy=="A"), aes(temperature.C..1m.)) +
+  geom_histogram(col='black', fill='white',aes(y = ..density..)) + xlab("Temperature in c for 1 meter")+xlim(c(7,21))+
+  stat_function(fun = dnorm, colour = "red",
+                args = list(mean = mean(buoydata$temperature.C..1m.[buoydata$Buoy=="A"], na.rm = TRUE),sd = sd(buoydata$temperature.C..1m.[buoydata$Buoy=="A"], na.rm = TRUE)))
+gATem+ggtitle("Temperature distribution for Buoy A")
+```
+
+```{r}
+gETem<-ggplot(subset(buoydata,Buoy=="E"), aes(temperature.C..1m.)) +
+  geom_histogram(col='black', fill='white',aes(y = ..density..)) + xlab("Temperature in c for 1 meter")+xlim(c(7,21))+
+  stat_function(fun = dnorm, colour = "red",
+                args = list(mean = mean(buoydata$temperature.C..1m.[buoydata$Buoy=="E"], na.rm = TRUE),sd = sd(buoydata$temperature.C..1m.[buoydata$Buoy=="E"], na.rm = TRUE)))
+gETem+ggtitle("Temperature distribution for Buoy E")
+```
+
+```{r}
+gMTem<-ggplot(subset(buoydata,Buoy=="M"), aes(temperature.C..1m.)) +
+  geom_histogram(col='black', fill='white',aes(y = ..density..)) + xlab("Temperature in c for 1 meter")+xlim(c(7,21))+
+  stat_function(fun = dnorm, colour = "red",
+                args = list(mean = mean(buoydata$temperature.C..1m.[buoydata$Buoy=="M"], na.rm = TRUE),sd = sd(buoydata$temperature.C..1m.[buoydata$Buoy=="M"], na.rm = TRUE)))
+gMTem+ggtitle("Temperature distribution for Buoy M")
+```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+## Warning: Removed 2 rows containing missing values (geom_bar).
+
+###Using Facet grid in GGPlot
+A useful customization of ggplot for comparative purposes is to use facets. Facet_grid and facet_wrap for example allow you to specify a grouping factor for subsets of data but plot them together. A facet_grid plot subsets horizontally or vertically stacked plots depending on the position of the grouping variable (e.g. facet_grid(.~Buoy) creates horizontal facets and facet_grid(Buoy ~.) creates vertically stacked plots. Facet_wrap wraps plots together with a certain number per row and column which can be specified.
+###Use the following code to create three different facet plots for salinity.
+
+###Vertical grid alignment
+
+```{r}
+ggplot(data=buoydata, aes(salinity.psu..1m.)) + geom_histogram(binwidth = .1, col="black",fill="darkred")+facet_grid(.~Buoy)+xlab("Salinity in psu at 1 meter")
+```
+
+
+###Horizontal grid alignment
+
+```{r}
+ggplot(data=buoydata, aes(salinity.psu..1m.)) + geom_histogram(binwidth = .1, col="black",fill="darkred")+facet_grid(Buoy~.)+xlab("Salinity in psu at 1 meter")
+```
+
+
+###Wrapped alignment
+
+```{r}
+ggplot(data=buoydata, aes(salinity.psu..1m.)) + geom_histogram(binwidth = .1, col="black",fill="darkred")+facet_wrap(~Buoy)+xlab("Salinity in psu at 1 meter")
+```
+
+Describe which facet plot you think best represents a comparison of distributions across the buoys. Add brief comments to your lab report comparing information on the facet plots compared to the individual salinity histograms for each buoy.
+###Creating Boxplots
+The same ggplot syntax for histograms applies generally to boxplots. You specify the graph type you want by specifying geom_boxplot. For the boxplot you need to specify x and y where x is typically a grouping factor (e.g. Buoy) and y is a continuous variable.
+
+###Create boxplots for salinity and temperature.
+Example for salinity - repeat for temperature.
+
+```{r}
+ggplot(buoydata,aes(x=Buoy, y=salinity.psu..1m., fill=factor(Buoy)))+
+  geom_boxplot()+ylab("Salinity in psu") + 
+  stat_summary(fun.y=mean,shape=15,col='blue', size= 2.5,geom='point') +
+  ggtitle("Salinity distribution for all buoys")+
+  theme(plot.title = element_text(hjust = 0.5, face="bold", size=10))
+```
+
+
+```{r}
+ggplot(buoydata,aes(x=Buoy, y=temperature.C..1m., fill=factor(Buoy)))+
+  geom_boxplot()+ylab("Temperature in C") + 
+  stat_summary(fun.y=mean,shape=15,col='blue', size= 2.5,geom='point') +
+  ggtitle("Temperature distribution for all buoys")+
+  theme(plot.title = element_text(hjust = 0.5, face="bold", size=10))
+```
+
+
+Referring to the boxplots, describe how the distributions for salinity and temperature compare across the four buoy locations. Compare in terms of the distribution characteristics (mean, spread, skew, kurtosis).
+In your lab report briefly compare differences between the distribution information provided by the boxplots versus the histograms.
+
