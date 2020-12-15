@@ -1,0 +1,363 @@
+---
+title: "Lab7"
+author: "Valerie Kamgue"
+date: "11/16/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+library(rgdal)
+library(gstat)
+library(classInt)
+library(RColorBrewer)
+library(ggplot2) 
+library(e1071) 
+library(plyr) 
+library(knitr) 
+```
+
+
+```{r}
+geochempoints<- readOGR(dsn = "C:/Users/valer/Desktop/SIE512/Labs/Lab7/data", layer = "GeoChemSmall") 
+```
+
+
+```{r}
+names(geochempoints) 
+```
+
+
+```{r}
+class(geochempoints)
+```
+
+
+```{r}
+summary(geochempoints)
+```
+
+
+
+```{r}
+DF <- as.data.frame(geochempoints)
+```
+
+
+```{r}
+ggplot(DF, aes(Co)) + geom_histogram()
+```
+
+
+
+```{r}
+ggplot(data=DF, aes(Co)) + geom_histogram(col='black',fill='green')+xlab("Cobalt")+xlim(c(0,75))+ggtitle("Histogram of Cobalt Values")
+```
+
+
+
+```{r}
+spplot(geochempoints, 'Co')
+```
+
+
+
+###Create a Validation Sample
+
+
+```{r}
+geochempointsdf<-as.data.frame(geochempoints)#convert the spatial object type to a data frame
+```
+
+
+```{r}
+CobaltValidation<-geochempointsdf[seq(1,length(geochempointsdf$Co), by=10),c("X","Y","Co")] #creates a subset of cobalt values
+```
+
+
+```{r}
+summary(CobaltValidation)
+```
+
+
+
+```{r}
+CobaltTest<-geochempointsdf[setdiff(rownames(geochempointsdf),rownames(CobaltValidation)), c("X","Y","Co")]
+```
+
+
+```{r}
+summary(CobaltTest)
+```
+
+
+```{r}
+ggplot(data=CobaltValidation, aes(Co)) + geom_histogram(col='black',fill='green')+xlab("Cobalt")+xlim(c(5,58))+ggtitle("Histogram of Cobalt Validation")
+```
+
+
+
+```{r}
+ggplot(data=CobaltTest, aes(Co)) + geom_histogram(col='black',fill='green')+xlab("Cobalt")+xlim(c(0,74))+ggtitle("Histogram of Cobalt Test")
+```
+
+
+
+
+```{r}
+coordinates(CobaltTest)<-~X+Y
+```
+
+
+##Creating and Fitting models to an Estimated Variogram
+
+```{r}
+Co.var1<-variogram(Co ~1, data=CobaltTest)
+plot(Co.var1, pch=16, cex=1)
+
+```
+
+
+
+```{r}
+CoCir.vgm<-vgm(50, "Cir", 20000, 50)
+CoCir.vgm
+```
+
+
+```{r}
+plot(Co.var1, pch=16, CoCir.vgm)
+```
+
+
+
+```{r}
+CoExp.vgm<-vgm(50, "Exp", 20000, 50)
+CoExp.vgm
+```
+
+
+
+```{r}
+plot(Co.var1, pch=16, CoExp.vgm)
+```
+
+
+
+##Fitting by Weighted Least Squares
+
+```{r}
+CoCir.fit<-fit.variogram(Co.var1, CoCir.vgm)
+plot(Co.var1, pch=16,CoCir.fit)
+```
+
+
+
+```{r}
+CoExp.fit<-fit.variogram(Co.var1, CoExp.vgm)
+plot(Co.var1, pch=16,CoExp.fit)
+
+```
+
+
+```{r}
+attr(CoCir.fit, "SSErr")
+```
+
+
+```{r}
+attr(CoExp.fit, "SSErr")
+```
+
+
+```{r}
+CoCir.fit
+```
+
+
+```{r}
+CoExp.fit
+```
+
+
+
+##Ordinary Kriging
+
+```{r}
+cobalt.grid<-spsample(CobaltTest, 1000, type="regular")
+```
+
+
+```{r}
+plot(cobalt.grid)
+points(CobaltTest, pch=16, col='red')
+title("Interpolation Grid and Sample Points")
+```
+
+
+```{r}
+CoCir.k<-krige(Co ~1, locations=CobaltTest, newdata=cobalt.grid, model=CoCir.fit)
+```
+
+
+
+```{r}
+zd=zerodist(CobaltTest)
+CobaltTest2 <- CobaltTest[-zd[,2], ] #removes the duplicate
+```
+
+
+
+
+```{r}
+CoExp.k<-krige(Co ~1, locations=CobaltTest2, newdata=cobalt.grid, model=CoExp.fit)
+```
+
+
+```{r}
+summary(CoCir.k)
+```
+
+
+```{r}
+summary(CoExp.k)
+```
+
+
+```{r}
+gridded(CoCir.k) <- TRUE # creates a gridded output
+cols <- brewer.pal(n=7, 'Blues')# sets the color parameters
+spplot(CoCir.k, zcol="var1.pred", col.regions=cols, at=seq(8,48,6),main='OK Prediction for Cobalt: Circular Model')
+
+```
+
+
+```{r}
+cols <- brewer.pal(n=7, 'Reds')
+spl <- list('sp.points', CobaltTest, cex=0.75, pch=16, col='black')
+spplot(CoCir.k, zcol='var1.var', sp.layout=spl, col.regions= cols, at=seq(55,103,8),main='OK Variance for Cobalt: Circular Model' )
+
+```
+
+
+```{r}
+gridded(CoExp.k) <- TRUE
+cols <- brewer.pal(n=7, 'Blues')
+spplot(CoExp.k, zcol="var1.pred", col.regions=cols, at=seq(8,48,6), main='OK Prediction for Cobalt: Exponential Model')
+
+```
+
+
+```{r}
+cols <- brewer.pal(n=7, 'Reds')
+spl <- list('sp.points', CobaltTest, cex=0.75, pch=16, col='black')
+spplot(CoExp.k, zcol='var1.var', sp.layout=spl, col.regions=cols, at=seq(55,103,8), main='OK Variance for Cobalt: Exponential Model' )
+
+```
+
+
+
+```{r}
+coordinates(CobaltValidation)<-~X+Y
+```
+
+```{r}
+CoCir.val<-krige(Co ~1, locations=CobaltTest, newdata= CobaltValidation, model=CoCir.fit)
+
+```
+
+
+```{r}
+CoExp.val<-krige(Co ~1, locations=CobaltTest2, newdata= CobaltValidation, model=CoExp.fit)
+```
+
+
+```{r}
+diffCir<- CobaltValidation$Co-CoCir.val$var1.pred
+diffExp<- CobaltValidation$Co-CoExp.val$var1.pred
+
+```
+
+
+```{r}
+rmseCir<-sqrt(sum(diffCir^2)/length(diffCir))
+MECir<-sum(diffCir/length(diffCir))
+
+rmseExp<-sqrt(sum(diffExp^2)/length(diffExp))
+MEExp<-sum(diffExp/length(diffExp))
+
+```
+
+
+
+```{r}
+circular=c(round(rmseCir, 3),round(MECir,3))
+exponential=c(round(rmseExp,3),round(MEExp,3))
+cnames=c("RMSE  ", "  Mean Error")
+validationtable=rbind(circular, exponential)
+colnames(validationtable)=cnames
+kable(validationtable)
+
+```
+
+
+##Evaluation using Cross Validation
+
+
+```{r}
+CoCir.cv<-krige.cv(Co~1, CobaltTest2, model=CoCir.fit, nfold=nrow(CobaltTest2))
+```
+
+
+```{r}
+summary(CoCir.cv)
+```
+
+
+```{r}
+# mean error, ideally 0:
+merrorcir <- mean(CoCir.cv$residual)
+merrorcir
+#RMSE, ideally small
+rmsec <- sqrt(mean(CoCir.cv $residual^2))
+rmsec
+#ratio of kriging variance to cross-validation residual
+msdr <- mean((CoCir.cv$residual^2)/ (CoCir.cv$var1.var))
+msdr
+```
+
+
+```{r}
+CoExp.cv<-krige.cv(Co~1, CobaltTest2, model=CoExp.fit, nfold=nrow(CobaltTest2))
+```
+
+
+```{r}
+summary(CoExp.cv)
+```
+
+
+```{r}
+# mean error, ideally 0:
+merrorexp <- mean(CoExp.cv$residual)
+merrorexp
+#RMSE, ideally small
+rmse <- sqrt(mean(CoExp.cv $residual^2))
+rmse
+#ratio of kriging variance to cross-validation residual
+msdr <- mean((CoExp.cv$residual^2)/ (CoExp.cv$var1.var))
+msdr
+```
+
+
+
+
+
+
+
+
