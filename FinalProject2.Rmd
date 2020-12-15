@@ -1,0 +1,222 @@
+---
+title: "FinalProject"
+author: "Valerie Kamgue"
+date: "12/7/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(plyr)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(rpart)
+library(nlme)
+```
+
+```{r}
+library(classInt)
+library(RColorBrewer)
+library(gstat)
+library(tseries)
+library(spatstat)
+library(splancs)
+```
+
+```{r}
+library(maptools)
+library(sp)
+library(lmtest)
+library(rgdal)
+```
+
+
+
+```{r}
+setwd("C:/Users/valer/Desktop/SIE512/FinalProject")
+crash5Years <- read.csv("CrashData.csv")
+```
+
+
+```{r}
+class(crash5Years)
+```
+
+
+
+```{r}
+datacrash <- readOGR(dsn="C:/Users/valer/Desktop/SIE512/FinalProject/BennettDrCrashes_5Years", layer="Crashes___5_Years")
+```
+
+
+```{r}
+plot(datacrash, pch=16, )
+title("2014-2018 Crash Locations")
+```
+
+
+
+
+```{r}
+head(crash5Years)
+```
+
+
+
+```{r}
+crash5Years$ymd <- as.Date(accident_date, "%Y-%m-%d")
+crash5Years$hms <- strptime(accident_time, "%H:%M:%S")
+crash5Years$hms <- as.POSIXct(crash5Years$hms)
+crash5Years$Month <- month(crash5Years$ymd, label = TRUE)
+crash5Years$Year <- year(crash5Years$ymd)
+crash5Years$wday <- wday(crash5Years$ymd, label = TRUE)
+crash5Years$Hour <- hour(crash5Years$hms)
+```
+
+
+
+```{r}
+yearMonth <- ddply(crash5Years, c("Year", "Month"), summarise,  N = length(ymd))
+#attach(yearMonth)
+```
+
+
+
+```{r}
+ggplot(yearMonth, aes(Year, Month)) + geom_tile(aes(fill = N),colour = "white", na.rm = TRUE) +
+  scale_fill_gradient(low = "pink", high = "purple") +  
+  guides(fill=guide_legend(title="Total Crashes")) +
+  theme_bw() + theme_minimal() + 
+  labs(title = "Crashes by year and month",
+       x = "Year", y = "Month") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+```
+
+
+
+```{r}
+dayHour <- ddply(crash5Years, c( "Hour", "wday"), summarise, N = length(ymd))
+#attach(dayHour)
+```
+
+
+```{r}
+ggplot(dayHour, aes(Hour, wday)) + geom_tile(aes(fill = N),colour = "white", na.rm = TRUE) +
+  scale_fill_gradient(low = "pink", high = "purple") +  
+  guides(fill=guide_legend(title="Total Crashes")) +
+  theme_bw() + theme_minimal() + 
+  labs(title = "Crashes by Day of Week and Hour",
+       x = "Hour", y = "Day of Week") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+```
+
+
+
+```{r}
+LocationHour <- ddply(crash5Years, c( "type_of_location", "Hour"), summarise, N = length(ymd))
+#attach (LocationHour)
+```
+
+
+
+```{r}
+ggplot(LocationHour, aes(Hour, type_of_location)) + geom_tile(aes(fill = N), colour = "white", na.rm = TRUE) +
+  scale_fill_gradient(low = "pink", high = "purple") +  
+  guides(fill=guide_legend(title="Total Crashes")) +
+  labs(title = "Crashes by Location and Hour",
+       x = "Hour", y = "Location") +
+  theme_bw() + theme_minimal() + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+```
+
+
+```{r}
+ggplot(data = crash5Years, aes(Dist_Intersection_ft)) + geom_histogram(bins=10,col='black',fill='blue')+xlab("5-Year Crash Location Offset Distances from Intersections")+ ggtitle("Histogram of Crash Location Offset Distances from Intersections")
+```
+
+
+
+```{r}
+lineartest<-lm(offset_ ~ latitude+longitude, data=datacrash)
+summary(lineartest)
+```
+
+
+
+```{r}
+plot(lineartest, which=1 ,pch=16)
+```
+
+
+
+
+
+```{r}
+plot(lineartest, which=2 ,pch=16)
+```
+
+
+
+
+```{r}
+plot(lineartest, which=5 ,pch=16)
+```
+
+
+
+```{r}
+bptest(lineartest)
+jarque.bera.test(lineartest$residuals)
+shapiro.test(lineartest$residuals)
+```
+
+
+
+```{r}
+linresiduals <-lineartest$residual
+lresiduals<-spCbind(datacrash, linresiduals)
+plotvar <- lresiduals$linresiduals
+nclr <- 4
+plotclr <- brewer.pal(nclr,"RdBu") 
+class <-classIntervals(plotvar, nclr, style ="sd")
+colcode <- findColours(class, plotclr)
+plot(lresiduals, pch=16, col=colcode, cex=1.5, axes=T)
+points(lresiduals, cex=1.5)
+title("Crashes Residuals - Linear Model ")
+legend("topleft", legend=names(attr(colcode, "table")),fill=attr(colcode, "palette"), cex=0.6, bty="n")
+```
+
+
+
+
+```{r}
+crashppp <- as.ppp(datacrash)
+```
+
+
+
+```{r}
+Lcrashppp <-Lest(crashppp)
+plot(Lcrashppp, cbind(iso,trans,border, theo)-r ~ r, col=c(2,3,4,1), lty=c(1,1,1,2), main="Crashppp LFunction", legend=F)
+legend("bottomright" ,legend=c("iso","trans","border", "theo"), col=c(2,3,4,1), lty=c(1,1,1,2), box.lty=0)
+```
+
+
+
+```{r}
+envcrashppp = envelope(crashppp, Lest, 39, global=T)
+plot(envcrashppp, cbind(obs,hi,lo,theo)-theo ~theo, col=c(2,1,1,4),lwd=c(2,1,1,1),main ="Crashppp",legend= F)
+legend("right" ,legend=c("obs","hi","lo", "theo"), col=c(2,1,1,4), lwd=c(2,1,1,1),lty=c(1,1,1,2), box.lty=0)
+```
+
+
+
+
+
+
+
+
