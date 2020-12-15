@@ -1,0 +1,209 @@
+---
+title: "Lab 5"
+author: "Kate"
+date: "October 31, 2019"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(spatstat)
+```
+
+
+```{r echo=FALSE}
+data(lansing)
+maples<-split(lansing)$maple
+par(ps = 12, cex = 1, cex.main = 1)
+par(mfrow=c(1,2),mar=c(1,1,1,1))
+plot(lansing$window, main="Maples")
+points(maples, pch=16, col="red")
+hicks <- split(lansing)$hickory
+par(ps = 12, cex = 1, cex.main = 1)
+plot(lansing$window, main="Hickories")
+points(hicks,pch=16, col="blue")
+```
+
+The plot of Maples shows non-constant intensity with pockets of clustering in the center of the study region and toward the southern boundary of the study region.
+
+Plot of hickories shows non-constant intensity. Some dense clustering appears in Northwest corner and along the eastern boundary of the study region.
+
+```{r echo=FALSE, fig.width=4.5, fig.height=5.5}
+plot(lansing$window, main="Maples and Hickories") #opens a blank window
+points(hicks,pch=16, col="blue") 		# plots hickories
+points(maples,pch=16, col="red") 		# plots maples
+legend(.1,.1, c("Maple", "Hickory"), c("red","blue"))
+```
+
+The combined plot of hickories and maples shows that in general their distributions do not strongly overlap. Hickories are dominant in the upper left and right corners. Maples are denser in the lower portion and center, and generally more clustered in locations where hickories are not present
+
+
+
+```{r  fig.width=4.5, fig.height=4.5}
+Lmaples=Lest(maples)
+par(ps = 12, cex = 1, cex.main = 1)
+plot(Lmaples, cbind(iso,trans,border, theo)-r ~ r, col=c(2,3,4,1), lty=c(1,1,1,2), main="Maples LFunction", legend=F)
+legend("right" ,legend=c("iso","trans","border", "theo"), col=c(2,3,4,1), lty=c(1,1,1,2), box.lty=0)
+```
+
+The Lhat-r  for maples rises above the CSR reference line indicating clustering. All edge corrected versions show similar results.
+
+```{r echo=FALSE, fig.width=4.5, fig.height=4.5}
+maple.lenv = envelope(maples, Lest, 19, global=T)
+par(ps = 12, cex = 1, cex.main = 1)
+plot(maple.lenv, cbind(obs,hi,lo,theo)-theo ~theo, col=c(2,1,1,4),lwd=c(2,1,1,1),lty=c(1,1,1,2),main ="Maples",legend=F)
+legend("right" ,legend=c("obs","hi","lo", "theo"), col=c(2,1,1,4), lwd=c(2,1,1,1),lty=c(1,1,1,2), box.lty=0)
+```
+
+The Lhat-r  for Maples is above the envelope based on 19 simulations indicating a significant (.05) departure from CSR in favor of clustering.
+
+```{r echo=FALSE, fig.width=4.5, fig.height=4.5}
+Lhicks=Lest(hicks)
+par(ps = 12, cex = 1, cex.main = 1)
+plot(Lhicks, cbind(iso,trans,border, theo)-r ~ r, col=c(2,3,4,1), lty=c(1,1,1,2), main="Hickories LFunction", legend=F)
+legend("bottom" ,legend=c("iso","trans","border", "theo"), col=c(2,3,4,1), lty=c(1,1,1,2), box.lty=0)
+```
+
+The border corrected versions of Lhat-r for hickories fall above the line suggesting clustering. The "bord" reduced sample estimator edge correction deviates most from the others since it removes more events from the edges. The hickory distribution has many more trees close to the borders so it is quite sensitive to this correction.
+
+```{r echo=FALSE, fig.width=4.5, fig.height=4.5}
+hick.lenv = envelope(hicks, Lest, 19, global=T)
+plot(hick.lenv, cbind(obs,hi,lo,theo)-theo ~theo, col=c(2,1,1,4),lwd=c(2,1,1,1),lty=c(1,1,1,2),main ="Hickories",legend=F)
+legend("right" ,legend=c("obs","hi","lo", "theo"), col=c(2,1,1,4), lwd=c(2,1,1,1),lty=c(1,1,1,2), box.lty=0)
+```
+
+The Lhat-r for hickories falls above the simultaneous envelope based on 19 simulations indicating a significant (.05) departure from CSR in favor of clustering.
+
+```{r echo=FALSE, fig.width=4.5, fig.height=4.5}
+par(ps = 12, cex = 1, cex.main = 1)
+hick.lenv2 = envelope(hicks, Lest,  funargs=list(correction="border"), 19, global=T)
+plot(hick.lenv2, cbind(obs,hi,lo,theo)-theo ~theo, col=c(3,1,1,4),lwd=c(2,1,1,1),main ="Hickory LFunction with Border Corrected version",legend=F)
+legend("bottom" ,legend="Hickory Border Cor", col="green", lty=1, box.lty=0)
+```
+
+The border correction removes points from the edges incrementally with increasing r so with r = .18 or about 160 feet - hickories within 150 feet of the border have been removed. This leaves just the more central hickories which show less clustering and moves towards regularity as the distance "r" increases.
+
+```{r echo=FALSE, fig.width=4.5, fig.height=4.5}
+#par(ps = 12, cex = 1, cex.main = 1)
+plot(maple.lenv, cbind(obs,hi, lo,theo)-theo ~theo, col=c(2,1,1,4),lwd=c(2,1,1,1),main ="Maples and Hickories",legend=F)
+
+plot(hick.lenv, cbind(obs,hi, lo,theo)-theo ~theo, col=c(3,1,1,4),lwd=c(2,1,1,1), legend=FALSE, add=TRUE)
+legend("right" ,legend=c("maples", "hickories"), col=c(2,3),lwd=c(2,2), lty=c(1,1), box.lty=0)
+```
+
+The combined plot of Lhat for maples and hickories falls above the envelope based on 19 simulations indicating a significant departure from CSR in favor of clustering for both species and since the Lhat for Maples is above that of , indicates more clustering in maples than hickories.
+
+```{r echo=F,fig.width=4.5, fig.height=4.5}
+Lmh <- Lcross(lansing, "hickory", "maple")
+par(ps = 12, cex = 1, cex.main = 1)
+plot(Lmh,.-r ~r, lty= c(1,1,1,2), col=c(4,5,6,1), main="LCross of Maples and Hickories", legend=F)
+legend("top" ,legend=c("iso","trans","border", "theo"), col=c(4,5,6,1), lty=c(1,1,1,2), box.lty=0)
+
+```
+
+The CrossLhat-r  for maples and hickories falls below the zero line indicating a departure from independence  in favor  of repulsion between the species. The border corrected version incrementally removes edge hickories with increasing r leaving a pattern that appears more independent or even positively interacting with maples.
+
+```{r echo=F,fig.width=4.5, fig.height=4.5}
+mhcross.env<-(envelope(lansing, Lcross, i="maple", j="hickory", nsim=39,  simulate=expression(rshift(lansing, edge="torus"))))
+par(ps = 12, cex = 1, cex.main = 1)
+plot(mhcross.env, .-mmean ~mmean, col=c(2,1,1,4),lwd=c(2,1,1,1), main="LCross Envelope", legend=F)
+```
+
+The null hypothesis is that maples and hickories are spatially independent of each other. The CrossLhat for maples and hickories falls below the envelope based on 39 random shifts indicating a significant departure from independence in favor of repulsion between the species.
+
+```{r}
+msmall=subset(maples, x>=.25& x<=.75&y>=.25&y<=.75)
+hsmall=subset(hicks, x>=.25& x<=.75&y>=.25&y<=.75)
+marks(msmall)= factor("maples")
+marks(hsmall)= factor("hickories")
+mh=superimpose(msmall, hsmall)
+plot(mh$window, main="Subset Maples and Hickories") 
+points(msmall, pch=16, col="darkgreen")
+points(hsmall, pch=16, col="brown")
+
+```
+
+
+```{r}
+Lsmallmh <- Lcross(mh, "hickories", "maples")
+plot(Lsmallmh,.-r ~r, lty= c(1,1,1,2), col=c(4,5,6,1), main="LCross of Center Subset Maples and Hickories", legend=F)
+```
+
+Using a subset of the center of the region we see an attraction behavior between maples and hickories.
+
+```{r}
+
+plot(mhcross.env, .-mmean ~mmean, col=c(2,1,1,4),lwd=c(2,1,1,1), main="LCross Envelope", ylim=c(-0.03, 0.2),legend=F)
+plot(Lsmallmh,.-r ~r, lty= c(1,1,1,2), col=c(1,2,3,4), legend=F, add=T)
+plot(Lmh,.-r ~r, lty= c(1,1,1,2), col=c(4,5,6,1), main="LCross of Subset Maples and Hickories", legend=F, add=T)
+```
+
+ 
+####Testing for Space time interaction in Burkitts Lymphoma
+
+
+H0: The spatial and temporal pattern in lymphoma is completely spatially and temporally random. 
+
+H1: The pattern is spatially and temporally clustered
+```{r echo=FALSE, include=FALSE}
+library(splancs)
+data(burkitt)
+```
+
+Code for knox test of Burkitts Lymphoma
+```{r }
+knoxX=function (s,t){
+  X=sum(s < 4 & s !=0&t < 180 & t !=0)
+  return(X)} 
+
+knoxsim <- function(t,s,nsim){
+  hold <- matrix(0,nsim)
+  for (i in 1:nsim){
+    temp <- sample(t, length(t))
+    difft <- dist(temp, method= "manhattan")
+    hold[i] <- knoxX(s, difft)}
+  return(hold)}
+knoxZtest <-function(diffs, difft, n){
+  sumspace=sum(diffs < 4.0 & diffs != 0 ) 
+  sumtime=sum(difft < 180 & difft !=0) 
+  exKnox=(2*sumspace*sumtime)/(n*(n-1))
+}
+
+Knoxtest <-function(data, nsims, alpha){ 
+          s<-dist(cbind(data$x, data$y))
+          t<-dist((data$t), method = "manhattan")
+          times = data$t
+          n=length(times)
+          X = knoxX(s,t)
+          simulations<- knoxsim(times,s,nsims)
+          simulations
+          hist(simulations ,main="Monte Carlo Distribution of Knox",       col='lightblue',xlab="Simulated Knox values", xlim=c(min(simulations), (X+2)))
+          abline(v=X, col=2)
+          NGE=sum(simulations>X)
+          p_value = round((NGE+1)/(nsims +1),3)
+          zt=knoxZtest(s, t, n)
+          zvalue=(X-zt)/(sqrt(zt))
+          result1=(ifelse(p_value<alpha, "reject CSTR", "Do not reject CSTR"))
+          pz=pnorm(zvalue, lower.tail = F)
+          result2 =(ifelse(pz<alpha, "reject CSTR", "Do not reject CSTR"))
+          output=c("ObsKnox"=X, "NGE"=NGE, "P_value"=p_value,                "result1"=result1, "expectedKnox"=round(zt,2),"zvalue"=round(zvalue,2),"zpvalue"=round(pz,3), "result2"=result2)
+          return(output)}
+
+
+```
+Results for 99 Simulations
+
+```{r fig.width=3.5, fig.height=3.5}
+par(ps = 12, cex = 1, cex.main = 1)
+getknox <- Knoxtest(data=burkitt, nsims=99, alpha=.05)
+getknox
+```
+Results for 150 Simulations
+
+```{r fig.width=3.5, fig.height=3.5}
+par(ps = 12, cex = 1, cex.main = 1)
+getknox <- Knoxtest(data=burkitt, nsims=150, alpha=.05)
+getknox
+```
