@@ -1,0 +1,310 @@
+---
+title: "Lab6"
+author: "Valerie Kamgue"
+date: "10/31/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(maptools)
+library(sp)
+library(classInt)
+library(RColorBrewer)
+library(gstat)
+library(lmtest)
+library(tseries)
+library(ggplot2)
+library(rgdal)
+
+```
+
+```{r}
+library(foreign)
+```
+
+####1.	Trend surface analysis
+
+```{r}
+calsoil <- readOGR(dsn="C:/Users/valer/Desktop/SIE512/Labs/Lab6/Lab6Data", layer="calcium")
+```
+
+
+##Plot the data using proportional symbols.
+
+```{r}
+plotvar <- calsoil$calcium
+nclr=5
+plotclr <- brewer.pal(nclr,"OrRd")
+class <-classIntervals(plotvar, nclr, style ="equal",dataPrecision=1)
+colcode <- findColours(class, plotclr)
+max.symbol.size=4
+min.symbol.size=.7
+symbol.size <- ((plotvar-min(plotvar))/ (max(plotvar)-min(plotvar))*(max.symbol.size-min.symbol.size)+min.symbol.size)
+plot(calsoil, pch=16, col=colcode, cex=symbol.size)
+points(calsoil, cex=symbol.size)
+title("Calcium Data")
+legend(x = "bottomright", legend=names(attr(colcode, "table")),
+    fill=attr(colcode, "palette"), cex=0.8, bty="n")
+
+```
+
+
+
+
+##Fit a linear trend surface model to the calcium data. 
+
+```{r}
+lm.ca<-lm(calcium ~ X+Y, data=calsoil)
+summary(lm.ca)
+
+```
+
+
+```{r}
+CX <- cor(calsoil$calcium, calsoil$X)
+CX
+```
+
+
+```{r}
+CY <- cor(calsoil$calcium, calsoil$Y)
+CY
+```
+
+
+```{r}
+Cdf<-as.data.frame(calsoil)
+```
+
+
+```{r}
+ggplot(Cdf, aes(x=X, y=calcium)) + geom_point(col='red') +ylab("calcium")+ geom_smooth(method=lm, se=FALSE)
+```
+
+
+
+```{r}
+ggplot(Cdf, aes(x=Y, y=calcium)) + geom_point(col='red') +ylab("calcium")+ geom_smooth(method=lm, se=FALSE)
+```
+
+
+
+
+```{r}
+plot(lm.ca, which=1 ,pch=16)
+```
+
+
+
+```{r}
+plot(lm.ca, which=2 ,pch=16)
+```
+
+
+
+```{r}
+plot(lm.ca, which=5 ,pch=16)
+```
+
+
+
+
+```{r}
+bptest(lm.ca)
+jarque.bera.test(lm.ca$residuals)
+shapiro.test(lm.ca$residuals)
+
+```
+
+
+```{r}
+resids <-lm.ca$residual
+calresids<-spCbind(calsoil, resids)
+
+plotvar <- calresids$resids
+nclr <- 5
+plotclr <- brewer.pal(nclr,"RdBu") 
+class <-classIntervals(plotvar, nclr, style ="sd")
+colcode <- findColours(class, plotclr)
+plot(calresids, pch=16, col=colcode, cex=1.5)
+points(calresids, cex=1.5)
+title("Calcium Residuals ")
+legend(x = "bottomright", legend=names(attr(colcode, "table")),fill=attr(colcode, "palette"), cex=0.6, bty="n")
+
+```
+
+
+```{r}
+anova(lm.ca)
+```
+
+
+##Fit a quadratic trend surface model
+
+```{r}
+calquad<-lm(calcium ~ X+Y+I(X^2)+I(Y^2)+I(X*Y), data=calsoil)
+summary(calquad)
+
+```
+
+
+
+```{r}
+anova(calquad)
+```
+
+
+##extract residual from quadratic model
+
+```{r}
+resids2 <-calquad$residual
+calresids2<-spCbind(calsoil, resids2)
+
+plotvar <- calresids2$resids2
+nclr <- 5
+plotclr <- brewer.pal(nclr,"RdBu") 
+class <-classIntervals(plotvar, nclr, style ="sd")
+colcode <- findColours(class, plotclr)
+plot(calresids2, pch=16, col=colcode, cex=1.5)
+points(calresids2, cex=1.5)
+title("Calcium Residuals Quadratic Model ")
+legend(x = "bottomright", legend=names(attr(colcode, "table")),fill=attr(colcode, "palette"), cex=0.6, bty="n")
+```
+
+
+```{r}
+plot(calquad, which=1 ,pch=16)
+```
+
+
+
+
+```{r}
+plot(calquad, which=2 ,pch=16)
+```
+
+
+
+```{r}
+plot(calquad, which=5 ,pch=16)
+```
+
+
+
+
+##2. Examination of second order effects in Calcium Data
+##Create a variogram of residuals from the liner trend model
+
+```{r}
+var1.calcium<-variogram(resids ~1, data=calresids)
+```
+
+
+```{r}
+var1.calcium
+```
+
+```{r}
+plot(var1.calcium,pch=16)
+```
+
+
+
+```{r}
+plot(var1.calcium,pch=16,pl=T)
+```
+
+
+
+
+
+
+
+```{r}
+covar.calcium<-variogram(resids ~1, data=calresids, covariogram=T)
+plot(covar.calcium,pch=16)
+
+```
+
+
+##Run this function with your initial estimated values for sill, range, and nugget
+
+```{r}
+Ca1.vgm<-vgm(59 , "Sph", 219.7515 , 30)
+```
+
+
+
+
+```{r}
+plot(var1.calcium, pch=16, Ca1.vgm)
+```
+
+
+##Fitting by Weighted Least Squares
+
+```{r}
+CaSph.fit<-fit.variogram(var1.calcium, Ca1.vgm)
+CaSph.fit 
+```
+
+
+```{r}
+plot(var1.calcium, pch=16, CaSph.fit)
+```
+
+
+
+##Next create an empirical variogram of residuals from the quadratic trend model, estimate variogram parameters for this model, fit the model using the weighted least squares fit.variogram function
+
+
+
+```{r}
+var2.calcium <- variogram(resids ~1, data=calresids2)
+```
+
+
+```{r}
+var2.calcium
+```
+
+
+```{r}
+plot(var2.calcium, pch=16)
+```
+
+
+
+
+```{r}
+plot(var2.calcium,pch=16,pl=T)
+```
+
+
+
+```{r}
+Ca2.vgm<-vgm(60 , "Sph", 230 , 30)
+```
+
+```{r}
+plot(var2.calcium, pch=16, Ca2.vgm)
+```
+
+
+```{r}
+CaSph2.fit<-fit.variogram(var2.calcium, Ca2.vgm)
+CaSph2.fit
+```
+
+```{r}
+plot(var2.calcium, pch=16, CaSph2.fit)
+```
+
+
+
+
+
